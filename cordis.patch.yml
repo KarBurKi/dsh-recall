@@ -1,0 +1,5 @@
+# dsh-recall：极简跨会话记忆（Host 半）。
+# 只提供三个工具——mem_save / mem_find / mem_forget；不注册核心服务、不注入上下文、不开后台任务。
+- insert:
+    - id: recall
+      name: dsh-recall
