@@ -1,7 +1,7 @@
 # dsh-recall 🧠
 
 给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）的**极简跨会话记忆**：
-3 个工具、零自动注入、按工作区一个 JSONL 文件，固定开销约 **501 tok/请求**。
+3 个工具、零自动注入、按工作区一个 JSONL 文件，固定开销约 **677 tok/请求**。
 
 > 同类方案 [dsh-meow-memory](https://github.com/Phant0Meow/dsh-meow-memory)（MIT）约 4,452 tok/请求，
 > 另有首轮注入与每轮关键词命中。本项目按「只在我真的需要时才付 token」的思路重做了一遍。
@@ -58,11 +58,20 @@ git clone <this-repo> ~/.dsh/plugins/dsh-recall
 
 | 工具 | 参数 | 说明 |
 |---|---|---|
-| `mem_save` | `text`（必填）、`kind`（fact/pref/lesson/task/proj）、`scope` | 写一条；重叠系数 ≥0.9 视为重复并合并 |
+| `mem_save` | `text`（必填）、`kind`（fact/pref/lesson/task/proj）、`keywords`、`goal`、`scope` | 写一条；重叠系数 ≥0.9 视为重复并合并 |
 | `mem_find` | `query`（可空）、`k`（1–20，默认 5）、`kind`、`scope` | `query` 留空 = 按时间倒序看最近 |
 | `mem_forget` | `id`、`scope` | 删除；id 来自 `mem_find` |
 
 `scope` 缺省 = 当前工作区目录名；写跨工作区的记忆传 `global`。
+
+### 关键词是手写的，不是自动提取的
+
+`keywords` 写同义词、别名、缩写、英文写法（`faster-whisper, ASR, 识别, 离线`），检索时按
+**正文 ×1 / 关键词 ×1.8 / 目标句 ×1.4** 三个字段分别打分；关键词原样出现在查询里再额外加 0.9。
+
+不写也能用（退回正文 bigram + BM25），但换个说法就搜不到——这是实测得出的取舍：
+自动提取的关键词只是正文的子集，加权重没意义，所以宁可让写入时多想一步。
+`goal` 只在 `kind: "task"` 时有意义，答的是「这件事要达成什么」而不是「做过什么」。
 
 ## 数据
 
@@ -84,12 +93,12 @@ git clone <this-repo> ~/.dsh/plugins/dsh-recall
 
 | 项 | meow-memory 0.31 | dsh-recall |
 |---|---|---|
-| 工具 schema | 2,464 tok（8 个） | **426 tok**（3 个） |
+| 工具 schema | 2,464 tok（8 个） | **602 tok**（3 个） |
 | 常驻引导 | 1,988 tok（system prompt） | **75 tok**（AGENTS.md） |
 | 首轮注入 | 有 | **无** |
 | 每消息命中 | 有（top-2） | **无** |
 | 后台任务 | 反思 + dream | **无** |
-| 合计固定开销 | ≈ 4,452 tok/请求 | **≈ 501 tok/请求** |
+| 合计固定开销 | ≈ 4,452 tok/请求 | **≈ 677 tok/请求** |
 
 ## 许可
 
