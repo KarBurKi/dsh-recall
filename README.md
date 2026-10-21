@@ -1,7 +1,7 @@
 # dsh-recall 🧠
 
 给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）的**极简跨会话记忆**：
-3 个工具、零自动注入、按工作区一个 JSONL 文件，固定开销约 **677 tok/请求**。
+3 个工具、零自动注入、按工作区一个 JSONL 文件，固定开销约 **726 tok/请求**。
 
 > 同类方案 [dsh-meow-memory](https://github.com/Phant0Meow/dsh-meow-memory)（MIT）约 4,452 tok/请求，
 > 另有首轮注入与每轮关键词命中。本项目按「只在我真的需要时才付 token」的思路重做了一遍。
@@ -12,6 +12,9 @@
 - **3 个工具**：`mem_save` / `mem_find` / `mem_forget`。
 - **零自动注入**：不改写你的 prompt、不往每轮塞命中结果，因此**不碰 KV 缓存、不污染上下文**。
 - **按工作区自动隔离**：scope 取当前会话工作区目录名，不需要模型传项目参数。
+- **跨库召回**：`mem_find` 默认同时查当前工作区与 `global`，两个库各算各的 BM25 再合并排序；来自 `global` 的结果标 `〔global〕`。
+- **写入闸门**：正文短于 12 字、或以 `- \`` / `#` 开头的清单/标题行，直接拒收——那半句不是判断。
+- **改口提醒**：关键词撞上两个以上、正文又不像、两边都带数字时，提示可能与旧卡冲突；**只提醒不自动作废**，判断权留在写的人手里。
 - **BM25 + 时间半衰**：中文 bigram + ASCII 词，越新的记忆权重越高（半衰期 60 天）。
 - **近乎重复自动合并**：只防手抖重写，语义重复交给 `mem_find` 判断。
 - **纯文件存储**：`~/.dsh/recall/<scope>.jsonl`，同名 `.md` 是人读版；改文件即改记忆，拷走即迁移。
@@ -93,12 +96,12 @@ git clone <this-repo> ~/.dsh/plugins/dsh-recall
 
 | 项 | meow-memory 0.31 | dsh-recall |
 |---|---|---|
-| 工具 schema | 2,464 tok（8 个） | **602 tok**（3 个） |
-| 常驻引导 | 1,988 tok（system prompt） | **75 tok**（AGENTS.md） |
+| 工具 schema | 2,464 tok（8 个） | **620 tok**（3 个） |
+| 常驻引导 | 1,988 tok（system prompt） | **106 tok**（AGENTS.md） |
 | 首轮注入 | 有 | **无** |
 | 每消息命中 | 有（top-2） | **无** |
 | 后台任务 | 反思 + dream | **无** |
-| 合计固定开销 | ≈ 4,452 tok/请求 | **≈ 677 tok/请求** |
+| 合计固定开销 | ≈ 4,452 tok/请求 | **≈ 726 tok/请求** |
 
 ## 许可
 
