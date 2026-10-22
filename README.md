@@ -10,6 +10,7 @@
 ## 特性
 
 - **3 个工具**：`mem_save` / `mem_find` / `mem_forget`。
+- **出处指针**：写入时自动记下会话 uuid（`〔s:xxxxxxxx〕`），`mem_find` 显示时带出。卡片是摘要不是原文，有出处才回溯得了；取不到就不写，不编。
 - **零自动注入**：不改写你的 prompt、不往每轮塞命中结果，因此**不碰 KV 缓存、不污染上下文**。
 - **按工作区自动隔离**：scope 取当前会话工作区目录名，不需要模型传项目参数。
 - **跨库召回**：`mem_find` 默认同时查当前工作区与 `global`，两个库各算各的 BM25 再合并排序；来自 `global` 的结果标 `〔global〕`。
@@ -61,7 +62,7 @@ git clone <this-repo> ~/.dsh/plugins/dsh-recall
 
 | 工具 | 参数 | 说明 |
 |---|---|---|
-| `mem_save` | `text`（必填）、`kind`（fact/pref/lesson/task/proj）、`keywords`、`goal`、`scope` | 写一条；重叠系数 ≥0.9 视为重复并合并 |
+| `mem_save` | `text`（必填）、`kind`（fact/pref/lesson/task/proj）、`keywords`、`goal`、`scope` | 写一条；自动记出处会话；重叠系数 ≥0.9 视为重复并合并 |
 | `mem_find` | `query`（可空）、`k`（1–20，默认 5）、`kind`、`scope` | `query` 留空 = 按时间倒序看最近 |
 | `mem_forget` | `id`、`scope` | 删除；id 来自 `mem_find` |
 
@@ -76,10 +77,19 @@ git clone <this-repo> ~/.dsh/plugins/dsh-recall
 自动提取的关键词只是正文的子集，加权重没意义，所以宁可让写入时多想一步。
 `goal` 只在 `kind: "task"` 时有意义，答的是「这件事要达成什么」而不是「做过什么」。
 
+### 出处：卡片是摘要，不是原文
+
+写入时自动带上 `s`（会话 uuid），`mem_find` 显示成 `〔s:xxxxxxxx〕`。
+
+一条没有出处的记忆，半年后读到只能选择相信或不信——而这两条路都不对。
+顺着 `s` 能回到那次会话的日志：`~/.dsh/sessions/--<工作区>--/session-<uuid>/session.v4.jsonl.zstd`。
+
+取不到会话 id 时 `s` 留空、不编造；老记忆没有 `s`，照常可用。
+
 ## 数据
 
 ```
-~/.dsh/recall/<scope>.jsonl   # 真相（每行 {id,t,k,x}）
+~/.dsh/recall/<scope>.jsonl   # 真相（每行 {id,t,k,x,s?,w?,g?}）
 ~/.dsh/recall/<scope>.md      # 人读版，随写入同步
 ```
 
