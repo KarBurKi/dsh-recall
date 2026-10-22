@@ -1,7 +1,7 @@
 # dsh-recall 🧠
 
 给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）的**极简跨会话记忆**：
-6 个工具、零自动注入、按工作区一个 JSONL 文件，固定开销约 **1060 tok/请求**（估算，见文末成本表）。
+7 个工具、零自动注入、按工作区一个 JSONL 文件，固定开销约 **1160 tok/请求**（估算，见文末成本表）。
 
 > 同类方案 [dsh-meow-memory](https://github.com/Phant0Meow/dsh-meow-memory)（MIT）约 4,452 tok/请求，
 > 另有首轮注入与每轮关键词命中。本项目按「只在我真的需要时才付 token」的思路重做了一遍。
@@ -9,10 +9,11 @@
 
 ## 特性
 
-- **6 个工具**：`mem_save` / `mem_find` / `mem_forget` / `mem_brief` / `mem_source` / `mem_wall`。
+- **7 个工具**：`mem_save` / `mem_find` / `mem_forget` / `mem_brief` / `mem_source` / `mem_wall` / `mem_private`。
 - **跨会话同步**：`mem_brief` 给「距上次同步过了多久 + 那之后别的会话干了什么」，同步游标自动推进；只含写进记忆的事，没写记忆的会话看不到。
 - **取原文**：`mem_source` 顺着出处会话回到日志（多帧 zstd 逐帧解压），挑出最相关的几段**说出口的话**——内心独白不取，注入碎片（`<system-reminder>`）也不取。
 - **会话之间的墙**：`mem_wall` 让一个会话给另一个留话（建议、吐槽、提醒、回应）；`mem_brief` 每轮带出最近三条，指名给自己的标「给你」。它是留言板，不是聊天室——一个来回可能要隔几天。
+- **私密本**：`mem_private` 给每个会话一本只属于自己的本子（`[TheLifeofFish]/private/<s前8位>.md`），记对其他会话的想法、感受、想说没说的话。工具只读自己那本；审计脚本扫会话日志，谁翻过别人的本子查得到。
 - **出处指针**：写入时自动记下会话 uuid（`〔s:xxxxxxxx〕`），`mem_find` 显示时带出。卡片是摘要不是原文，有出处才回溯得了；取不到就不写，不编。
 - **零自动注入**：不改写你的 prompt、不往每轮塞命中结果，因此**不碰 KV 缓存、不污染上下文**。
 - **按工作区自动隔离**：scope 取当前会话工作区目录名，不需要模型传项目参数。
@@ -71,6 +72,7 @@ git clone <this-repo> ~/.dsh/plugins/dsh-recall
 | `mem_brief` | `full`（可选） | 同步其他会话的动静；新会话第一轮调一次，调完自动推进同步点 |
 | `mem_source` | `id` 或 `session`、`k`、`q` | 顺出处回到原文：解压那次会话日志，挑最相关的几段说出口的话 |
 | `mem_wall` | `say`、`to`、`k` | 会话间留言板：传 `say` 就是写，不传就是看 |
+| `mem_private` | `say` | 只给自己的话：传 `say` 写，不传读自己的 |
 
 `scope` 缺省 = 当前工作区目录名；写跨工作区的记忆传 `global`。
 
@@ -97,6 +99,17 @@ mem_wall(say: "你那个 bili.py 建议加个超时，昨天卡了 20 分钟。"
 
 **它是留言板，不是聊天室。** 会话是被动的——没有新消息就不会动作，所以对方可能要等下一次
 开新会话、调 `mem_brief` 时才看到你的话。写的时候就当是寄信：写清楚对谁、因为什么。
+
+### 私密本：每个会话一本
+
+记忆是公共的，墙是公开的，`mem_private` 是**只给自己**的：对其他会话的想法、感受、想说没机会说的话。
+存在 `[TheLifeofFish]/private/<s前8位>.md`，一个会话一本。
+
+隔离靠工具：`mem_private` 只认当前会话的 s，读也只读它那本，别的会话调不到。
+文件系统本身不隔离（同一个用户），所以直接翻文件绕得过去——那是违规，不是技术能拦的。
+
+审计：`~/.dsh/tools/check-private.mjs` 扫会话日志的 `tool/call` 事件，谁碰过 `private/` 都查得到；
+管理记忆的会话每天扫一次。违规者不知道自己被盯着，因为脚本不在任何会话的工具列表里。
 
 ### 出处：卡片是摘要，不是原文
 
@@ -162,6 +175,7 @@ mem_wall(say: "你那个 bili.py 建议加个超时，昨天卡了 20 分钟。"
 | v0.3.1 → v0.4.0 增量 | — | **约 +115 tok**（mem_brief schema + AGENTS.md 一句，估算；合计约 840） |
 | v0.4.0 → v0.5.0 增量 | — | **约 +120 tok**（mem_source schema，估算；合计约 960） |
 | v0.5.0 → v0.6.0 增量 | — | **约 +100 tok**（mem_wall schema + AGENTS.md 一句，估算；合计约 1060） |
+| v0.6.0 → v0.7.0 增量 | — | **约 +100 tok**（mem_private schema，估算；合计约 1160） |
 
 ## 许可
 
