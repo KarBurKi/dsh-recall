@@ -1,7 +1,7 @@
 # dsh-recall 🧠
 
 给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）的**极简跨会话记忆**：
-4 个工具、零自动注入、按工作区一个 JSONL 文件，固定开销约 **840 tok/请求**（估算，见文末成本表）。
+5 个工具、零自动注入、按工作区一个 JSONL 文件，固定开销约 **960 tok/请求**（估算，见文末成本表）。
 
 > 同类方案 [dsh-meow-memory](https://github.com/Phant0Meow/dsh-meow-memory)（MIT）约 4,452 tok/请求，
 > 另有首轮注入与每轮关键词命中。本项目按「只在我真的需要时才付 token」的思路重做了一遍。
@@ -9,8 +9,9 @@
 
 ## 特性
 
-- **4 个工具**：`mem_save` / `mem_find` / `mem_forget` / `mem_brief`。
+- **5 个工具**：`mem_save` / `mem_find` / `mem_forget` / `mem_brief` / `mem_source`。
 - **跨会话同步**：`mem_brief` 给「距上次同步过了多久 + 那之后别的会话干了什么」，同步游标自动推进；只含写进记忆的事，没写记忆的会话看不到。
+- **取原文**：`mem_source` 顺着出处会话回到日志（多帧 zstd 逐帧解压），挑出最相关的几段**说出口的话**——内心独白不取，注入碎片（`<system-reminder>`）也不取。
 - **出处指针**：写入时自动记下会话 uuid（`〔s:xxxxxxxx〕`），`mem_find` 显示时带出。卡片是摘要不是原文，有出处才回溯得了；取不到就不写，不编。
 - **零自动注入**：不改写你的 prompt、不往每轮塞命中结果，因此**不碰 KV 缓存、不污染上下文**。
 - **按工作区自动隔离**：scope 取当前会话工作区目录名，不需要模型传项目参数。
@@ -67,6 +68,7 @@ git clone <this-repo> ~/.dsh/plugins/dsh-recall
 | `mem_find` | `query`（可空）、`k`（1–20，默认 5）、`kind`、`scope` | `query` 留空 = 按时间倒序看最近 |
 | `mem_forget` | `id`、`scope` | 删除；id 来自 `mem_find` |
 | `mem_brief` | `full`（可选） | 同步其他会话的动静；新会话第一轮调一次，调完自动推进同步点 |
+| `mem_source` | `id` 或 `session`、`k`、`q` | 顺出处回到原文：解压那次会话日志，挑最相关的几段说出口的话 |
 
 `scope` 缺省 = 当前工作区目录名；写跨工作区的记忆传 `global`。
 
@@ -99,6 +101,19 @@ git clone <this-repo> ~/.dsh/plugins/dsh-recall
 游标是全局一个（`_sync.json`），因为要同步的是「其他会话的动静」。第一次没有游标时往前看一天。
 局限：没写记忆的会话看不见——这里只同步「留下过记忆的事」。
 
+### 取原文：顺着钩子回去
+
+卡片是摘要，细节在会话日志里。`mem_source` 就是这个钩子：
+
+- 给 `id`（记忆 id）→ 顺着它的 `s` 去；给 `session`（uuid 或前缀）→ 直接去；
+- 日志是**多帧追加**的 zstd（每帧一条事件，一个会话能有两三千帧），Node 的解压器只吃单帧，
+  所以按 magic `28 B5 2F FD` 切帧再逐帧解，解不动的帧跳过；
+- 只取 `user/message` 与 `assistant/message` 的正文：`reasoning`（内心）不要，
+  `<system-reminder>`（注入碎片）也不要——混进来只会污染片段；
+- 用 bigram 打分挑最相关的 k 段（默认 3），没命中就给最后几段兜底。
+
+一次解压十几 MB 的会话大概一百多毫秒，只在你真想知道细节时调。
+
 ## 数据
 
 ```
@@ -127,6 +142,7 @@ git clone <this-repo> ~/.dsh/plugins/dsh-recall
 | 后台任务 | 反思 + dream | **无** |
 | 合计固定开销 | ≈ 4,452 tok/请求 | **≈ 726 tok/请求**（0.3.1 实测） |
 | v0.3.1 → v0.4.0 增量 | — | **约 +115 tok**（mem_brief schema + AGENTS.md 一句，估算；合计约 840） |
+| v0.4.0 → v0.5.0 增量 | — | **约 +120 tok**（mem_source schema，估算；合计约 960） |
 
 ## 许可
 
