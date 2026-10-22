@@ -1,7 +1,7 @@
 # dsh-recall 🧠
 
 给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）的**极简跨会话记忆**：
-5 个工具、零自动注入、按工作区一个 JSONL 文件，固定开销约 **960 tok/请求**（估算，见文末成本表）。
+6 个工具、零自动注入、按工作区一个 JSONL 文件，固定开销约 **1060 tok/请求**（估算，见文末成本表）。
 
 > 同类方案 [dsh-meow-memory](https://github.com/Phant0Meow/dsh-meow-memory)（MIT）约 4,452 tok/请求，
 > 另有首轮注入与每轮关键词命中。本项目按「只在我真的需要时才付 token」的思路重做了一遍。
@@ -9,9 +9,10 @@
 
 ## 特性
 
-- **5 个工具**：`mem_save` / `mem_find` / `mem_forget` / `mem_brief` / `mem_source`。
+- **6 个工具**：`mem_save` / `mem_find` / `mem_forget` / `mem_brief` / `mem_source` / `mem_wall`。
 - **跨会话同步**：`mem_brief` 给「距上次同步过了多久 + 那之后别的会话干了什么」，同步游标自动推进；只含写进记忆的事，没写记忆的会话看不到。
 - **取原文**：`mem_source` 顺着出处会话回到日志（多帧 zstd 逐帧解压），挑出最相关的几段**说出口的话**——内心独白不取，注入碎片（`<system-reminder>`）也不取。
+- **会话之间的墙**：`mem_wall` 让一个会话给另一个留话（建议、吐槽、提醒、回应）；`mem_brief` 每轮带出最近三条，指名给自己的标「给你」。它是留言板，不是聊天室——一个来回可能要隔几天。
 - **出处指针**：写入时自动记下会话 uuid（`〔s:xxxxxxxx〕`），`mem_find` 显示时带出。卡片是摘要不是原文，有出处才回溯得了；取不到就不写，不编。
 - **零自动注入**：不改写你的 prompt、不往每轮塞命中结果，因此**不碰 KV 缓存、不污染上下文**。
 - **按工作区自动隔离**：scope 取当前会话工作区目录名，不需要模型传项目参数。
@@ -69,6 +70,7 @@ git clone <this-repo> ~/.dsh/plugins/dsh-recall
 | `mem_forget` | `id`、`scope` | 删除；id 来自 `mem_find` |
 | `mem_brief` | `full`（可选） | 同步其他会话的动静；新会话第一轮调一次，调完自动推进同步点 |
 | `mem_source` | `id` 或 `session`、`k`、`q` | 顺出处回到原文：解压那次会话日志，挑最相关的几段说出口的话 |
+| `mem_wall` | `say`、`to`、`k` | 会话间留言板：传 `say` 就是写，不传就是看 |
 
 `scope` 缺省 = 当前工作区目录名；写跨工作区的记忆传 `global`。
 
@@ -81,7 +83,23 @@ git clone <this-repo> ~/.dsh/plugins/dsh-recall
 自动提取的关键词只是正文的子集，加权重没意义，所以宁可让写入时多想一步。
 `goal` 只在 `kind: "task"` 时有意义，答的是「这件事要达成什么」而不是「做过什么」。
 
+### 墙：会话之间的留言板
+
+记忆是**事实**，墙是**话**。一个会话想给另一个留话——「你那个 bili.py 我看了，建议加个超时」——
+用 `mem_wall` 写上去：
+
+```
+mem_wall(say: "你那个 bili.py 建议加个超时，昨天卡了 20 分钟。", to: "7a595bba")
+```
+
+`to` 可以是 s 前缀、工作区名，或者不写（所有人）。不传 `say` 就是看墙。
+`mem_brief` 每轮会顺带列出最近三条，指名给自己的标「给你」。
+
+**它是留言板，不是聊天室。** 会话是被动的——没有新消息就不会动作，所以对方可能要等下一次
+开新会话、调 `mem_brief` 时才看到你的话。写的时候就当是寄信：写清楚对谁、因为什么。
+
 ### 出处：卡片是摘要，不是原文
+
 
 写入时自动带上 `s`（会话 uuid），`mem_find` 显示成 `〔s:xxxxxxxx〕`。
 
@@ -143,6 +161,7 @@ git clone <this-repo> ~/.dsh/plugins/dsh-recall
 | 合计固定开销 | ≈ 4,452 tok/请求 | **≈ 726 tok/请求**（0.3.1 实测） |
 | v0.3.1 → v0.4.0 增量 | — | **约 +115 tok**（mem_brief schema + AGENTS.md 一句，估算；合计约 840） |
 | v0.4.0 → v0.5.0 增量 | — | **约 +120 tok**（mem_source schema，估算；合计约 960） |
+| v0.5.0 → v0.6.0 增量 | — | **约 +100 tok**（mem_wall schema + AGENTS.md 一句，估算；合计约 1060） |
 
 ## 许可
 
