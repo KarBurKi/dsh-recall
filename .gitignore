@@ -4,5 +4,9 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# 本地测试脚本（假 ctx 跑判据），不进仓库
-tmp-test/
+# 测试脚本本身入库（别人要能复现「93 条全绿」），只排除产物
+tmp-test/*.log
+tmp-test/artifacts-*/
+tmp-test/*-src-*/
+tmp-test/artifacts*/
+__pycache__/
