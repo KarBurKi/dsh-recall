@@ -4,7 +4,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { apply } from "../lib/index.js";
+import { pathToFileURL } from "node:url";
+// FIX_SRC 指到另一份 lib/index.js 时跑那份（用来证明「换了旧实现这条断言会红」）。
+// 不指就跑工作区当前实现。
+const SRC = process.env.FIX_SRC ? path.resolve(process.env.FIX_SRC) : path.resolve("lib/index.js");
+const { apply } = await import(pathToFileURL(SRC).href);
 
 const handlers = {};
 const tools = {};
