@@ -49,6 +49,8 @@ git clone <this-repo> ~/.dsh/plugins/dsh-recall
 # 4) 重启 DSH 桌面端
 ```
 
+> 装好之后**每次改 `lib/index.js` 都要重启**。recall 是 host 侧插件，HMR 只管客户端插件。
+
 ### 方式二：插件市场
 
 若市场收录，直接搜索 `dsh-recall` 安装。未收录时用方式一。
