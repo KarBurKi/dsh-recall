@@ -1,6 +1,6 @@
 {
   "name": "dsh-recall",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "private": true,
   "description": "极简跨会话记忆：7 个工具、零自动注入、按工作区隔离，JSONL 文件即数据库。",
   "type": "module",
