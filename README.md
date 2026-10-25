@@ -264,7 +264,7 @@ overlap >= max(2, ceil(min(词数A, 词数B) × 0.6))
 
 换算系数约 1.6 字/token（中文）。空场景是 0，只有真写了规矩的会话才付这笔钱——这是它跟「无条件注入一大段引导」的区别。0.9.1 的 `_压缩存档` 不进 prompt，所以在成本上不出现。
 
-## 验证边界（0.9.5）
+## 验证边界（0.9.6）
 
 **存档写入这块经过五轮对抗式复验。** 每一轮都是让第三方 agent 只按一条标准判——「能不能构造出一个输入，让文件结构坏掉或者状态错」——构造得出来就 FAIL。五轮下来，作者自认为改好了的版本里有三轮被挑出真问题：
 
@@ -284,6 +284,14 @@ overlap >= max(2, ceil(min(词数A, 词数B) × 0.6))
 **不许只看单测绿就交。** 五轮里每一轮作者都觉得可以收，每一轮都被挑出东西——这个模式本身就说明「作者觉得可以」不作数。
 
 **诊断日志去哪儿看（0.9.5 起）**：注入相关的诊断走 `console.info`，落在宿主的 stdout（被 `restart-dsh.bat` 捕获成 `tmp_all/host-out-<时间>.log`），搜 `recall:` 就能找到。
+
+真实跑出来的那一行（2026-10-26 01:32，宿主重启后）：
+
+```text
+recall: section text 第 1 次 入参={agent,scope,signal} arg.session=false arg.agent=true 取到id=14052879-9075-44e5-a4dd-67175c13b382
+```
+
+**这个 `text` 回调的真实入参是 `{ agent, scope, signal }`——会话在 `arg.agent.session`。** `arg.session` 不存在，`arg` 本身也不是会话，所以取 id 走的是三路兜底的第二路。`sectionText` 里的注释记着这条，别再猜（0.9.6 就是把这句写进代码）。只打 1 行是因为拿到 id 后就闭嘴——机制和设计一致。
 
 别用 `ctx.logger`——它在 DSH 里事实上是哑的：cordis 自带的默认 exporter 只把消息推进内存环形缓冲（1000 条），`dsh-app-boot` 另外注册的那个阈值是 `levels: { default: 2 }`（WARN），`info` 是 level 1，直接滤掉，而且只存进内存数组。**整个宿主没有任何 exporter 写 stdout。** 宿主自己的包也因为这个用 `console.info(LOG_TAG, ...)` 打诊断（`dsh-llm-deepseek-account` 里那句注释写着 `product profiles mount no console exporter for ctx.logger`）。0.9.4 及更早那行 `ctx.logger?.info?.(...)` 一次都没打出来过，不是条件没触发，是通道不通。
 
