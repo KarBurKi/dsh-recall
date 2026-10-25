@@ -1,0 +1,22 @@
+import fs from "node:fs"; import path from "node:path"; import os from "node:os"; import { pathToFileURL } from "node:url";
+const SRC = path.resolve(process.env.FIX_SRC || "lib/index.js");
+const { apply } = await import(pathToFileURL(SRC).href);
+const handlers = {}; const tools = {};
+apply({ logger: { info: () => {} }, on: (ev, fn) => (handlers[ev] = fn),
+  inject: (d, cb) => cb({ effect: (fn) => fn(), tools: { register: (def) => ((tools[def.name] = def), () => {}) }, systemPrompt: { section: () => () => {} } }) });
+const ME = "f00d0b02";
+const dir = path.join(os.homedir(), ".dsh", "[TheLifeofFish]", "private", ME);
+const MINOR = path.join(dir, "_次要规则.md");
+fs.rmSync(dir, { recursive: true, force: true });
+const sess = { agent: { session: { header: { id: `session-${ME}` } } } };
+const r = tools.mem_private.execute({ which: "minor", say: "必须" + "字".repeat(598) + "，端口 4001。" }, sess);
+const minor = fs.readFileSync(MINOR, "utf8");
+const lines = minor.split("\n").filter((l) => l.trim());
+const line = lines.reduce((a, b) => (b.length > a.length ? b : a), "");
+const head = line.indexOf("] "), tail = line.indexOf(" — ");
+console.log("工具返回:", JSON.stringify(r).slice(0, 160));
+console.log("最长行长度:", line.length);
+console.log("head=", head, "tail=", tail, "body240长度=", head >= 0 && tail > head ? line.slice(head + 2, tail).length : -1);
+console.log("行首:", JSON.stringify(line.slice(0, 60)));
+console.log("行尾:", JSON.stringify(line.slice(-60)));
+console.log("含截断标记:", line.includes("…（原文"));
