@@ -1,8 +1,8 @@
 {
   "name": "dsh-recall",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
-  "description": "极简跨会话记忆：7 个工具、零自动注入、按工作区隔离，JSONL 文件即数据库。",
+  "description": "极简跨会话记忆：8 个工具、零自动注入、按工作区隔离，JSONL 文件即数据库。",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
